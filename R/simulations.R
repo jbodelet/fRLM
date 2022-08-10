@@ -16,7 +16,7 @@ simulateFuncReg <- function( n = 100, alpha = 0, delta = 3, omega = NULL, errorS
 }
 
 #' @export
-getTimePoints <- function( n, N = 5, method = "rep10" ){
+getTimePoints <- function( n, N = 5, method = "sumOfUniforms" ){
   if(method == "random"){
     tobs <- replicate( n, cumsum( rdirichlet( N + 1, 2 ) )[1:N], simplify = FALSE )  # dirichlets
   }
@@ -32,9 +32,16 @@ getTimePoints <- function( n, N = 5, method = "rep10" ){
     index <- c( 1:10, sample(1:10, size = n - 10, replace = TRUE ) )
     tobs <- tobs[index]
   }
+  if(method == "sumOfUniforms"){
+    tobs <- replicate(n,{
+      u <- runif(N+1);
+      cumsum(u[-1]) / sum(u)
+    }, simplify = FALSE )
+  }
   tobs <- lapply(tobs, round, digits = 2 )
-  return( list( tobs = tobs, index = index ) )
+  return( tobs )
 }
+
 
 
 #' @export

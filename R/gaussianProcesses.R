@@ -45,7 +45,7 @@ generateGaussianProcess <- function( mu = NULL, kernelFunc = NULL, sig2 = 1, gri
 gpFit <- function( tobs, Xobs, lambda = 0.01, optimizationRange = c(-2, 4), power = 1.95, nugget = 0 ){
   loss <- Vectorize( function(beta){
     N <- length(tobs)
-    corrMat <- getCorrMat( beta, tobs)
+    corrMat <- getCorrMat( beta, tobs, nugget)
     muHat <- getMuHat(corrMat, tobs )
     sigmaHat <- getSigmaHat( Xobs, muHat, corrMat )
     log( det(corrMat) ) + N * log( N * sigmaHat )  
@@ -55,7 +55,7 @@ gpFit <- function( tobs, Xobs, lambda = 0.01, optimizationRange = c(-2, 4), powe
   opt <- optimize( penalyzedLoss, optimizationRange )
   beta <- opt$min
   mu <- getMuHat(beta, tobs)
-  sig2 <- getSigmaHat( Xobs, mu, getCorrMat(beta, tobs) )
+  sig2 <- getSigmaHat( Xobs, mu, getCorrMat(beta, tobs, nugget) )
   # Output:
   out <- list( tobs = tobs, Xobs = Xobs, beta = beta, sig2 = sig2, mu = mu,
                nugget = nugget, power = power, lambda = lambda, 
@@ -77,7 +77,7 @@ predict.gpFit <- function( object, tnew = object$tobs ){
   N <- length(object$Xobs)
   M <- length(tnew)
   tobs <- object$tobs
-  corrMatObs <- getCorrMat(object$beta, tobs)
+  corrMatObs <- getCorrMat(object$beta, tobs, object$nugget)
   mu <- getMuHat(corrMatObs, tobs)
   corrMatNewWithObs <- expoKernelMat( tnew, tobs, object$beta )
   Xnew <- rep(mu,M) + corrMatNewWithObs %*% solve(corrMatObs) %*% ( object$Xobs - rep(mu,N) )
@@ -141,7 +141,7 @@ expoKernel <- function( x, y, beta, power = 1.96 ){ exp( -10^beta * abs( x - y )
 
 zeroFunction <- Vectorize( function(x) 0  )
 
-getCorrMat  <- function(beta, tobs ) expoKernelMat( tobs, tobs, beta ) # + nugget * diag(N)
+getCorrMat  <- function(beta, tobs, nugget = 0 ) expoKernelMat( tobs, tobs, beta ) + nugget * diag(length(tobs))
 
 getMuHat    <- function( corrMat, tobs ){ sum( solve( corrMat ) %*% tobs ) / sum( solve( corrMat ) ) }
 
