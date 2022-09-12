@@ -18,11 +18,11 @@ parameters {
 
 model {
   // the priors 
-  delta ~ exponential(1);
+  delta ~ normal(0, 10);
   beta ~ dirichlet( rep_vector( beta_par / L, L ) );
   sigma ~ lognormal(0,1);
   for ( j in 1:d )
-    alpha[j] ~ normal(0, 1);
+    alpha[j] ~ normal(0, 10);
   //The likelihood
   for (i in 1:n)
     y[i] ~ normal( delta * eta[i] * beta + C[i] * alpha, sigma^2 );

@@ -7,11 +7,10 @@
 funcReg_bayes(
   y,
   X,
-  grid,
   L = 5,
   covariates = NULL,
   beta_par = 1,
-  gridLength = 150,
+  grid = seq(0, 1, l = ncol(X)),
   ...
 )
 }
@@ -20,13 +19,13 @@ funcReg_bayes(
 
 \item{X}{A n times M matrix containing the n functions evaluated at points specified in grid.}
 
-\item{grid}{A vector of the points at which the functions are evaluated.}
-
 \item{L}{Number of B-splines basis to approximate omega.}
 
 \item{covariates}{A matrix of covariates.}
 
 \item{beta_par}{Hyperparameter of the dirichlet prior of beta.}
+
+\item{grid}{A vector of the points at which the functions are evaluated.}
 
 \item{...}{Optional parameters to pass to the stan function.}
 }

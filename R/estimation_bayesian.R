@@ -37,10 +37,9 @@
 #' # 3) Bayesian Estimation:
 #' fitBayes <- funcReg_bayes( y, condMu, warmup = 500, iter = 1000, chains = 2 )
 #' plot(fitBayes)
-funcReg_bayes <- function( y, X, grid, L = 5, covariates = NULL, beta_par = 1, gridLength = 150, ... ){
+funcReg_bayes <- function( y, X, L = 5, covariates = NULL, beta_par = 1, grid = seq(0,1, l = ncol(X) ), ... ){
   stopifnot( nrow(X) == length(y) )
   C <- cbind( rep(1, length(y) ), covariates )  # scalar predictors
-  grid <- seq(0,1, l = ncol(X) )
   basis <- getBasis( L, grid )
   Int_XtimesBasis <- X %*% basis / ncol(X)
   # Stan:
@@ -61,22 +60,25 @@ funcReg_bayes <- function( y, X, grid, L = 5, covariates = NULL, beta_par = 1, g
 
 
 #' @export
-predict.funcRegBayes <- function( object, newdata = seq(0,1, l = 150), type = "omega" ){
+predict.funcRegBayes <- function( object, newdata = seq(0,1, l = 150), returnALL = FALSE ){
   L <- object$L
   basis <- getBasis( L, grid = newdata )
-  omega <- basis %*% t(object$beta)
-  omega_mean <- rowMeans(omega)
-  omega_ci <- apply( omega, 1, quantile, probs = c(0.025, 0.975) )
-  return( list( omega_mean = omega_mean, omega_ci = omega_ci, grid = grid ) )
+  omega_all <- basis %*% t(object$beta)
+  omega <- rowMeans(omega_all)
+  omega_ci <- apply( omega_all, 1, quantile, probs = c(0.025, 0.975) )
+  out <- list( omega = omega, omega_ci = omega_ci, newdata = newdata )
+  if(returnALL){
+    out$omega_all <- omega_all    
+  }
+  return( out )
 }
 
 
 #' @export
-plot.funcRegBayes <- function(object){
+plot.funcRegBayes <- function(object, ylim = range( pred$omega_ci ), ...){
   grid <- seq(0,1, l = 150)
   pred <- predict(object)
-  ylim <- range( pred$omega_ci )
-  plot( pred$omega_mean ~ grid, lwd = 2, type = "l", col = "blue", ylim = ylim )
+  plot( pred$omega ~ grid, lwd = 2, type = "l", col = "blue", ylim = ylim, ... )
   lines( pred$omega_ci[1, ] ~ grid, col = "lightblue" )
   lines( pred$omega_ci[2, ] ~ grid, col = "lightblue" )
 }

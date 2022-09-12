@@ -129,7 +129,7 @@ getCondKernelFunc <- function( gpfit ){
   tobs <- gpfit$tobs
   kern <- function(t,s) expoKernelMat( t, s, gpfit$beta )
   invCorrMat <- solve( expoKernelMat( tobs, tobs, gpfit$beta ) )
-  return( function(t, s) kern(t, s) - kern(t, tobs) %*% invCorrMat %*% kern(tobs, s ) )
+  return( function(t, s) pmax( kern(t, s) - kern(t, tobs) %*% invCorrMat %*% kern(tobs, s ), 0 ) )  # sometimes, gets negative, when t is close to 0.
 }
 
 

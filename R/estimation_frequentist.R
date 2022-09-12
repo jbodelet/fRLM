@@ -32,7 +32,7 @@
 #' fit <- funcReg( y, condMu, grid, L = 5 )
 #' bootfit <- bootFunReg( y, condMu, grid, L = 5 )
 #' plot(bootfit)
-funcReg <- function( y, X, grid = seq(0,1, l = ncol(X) ), covariates = NULL, L = 6 ){
+funcReg <- function( y, X, covariates = NULL, L = 6, grid = seq(0,1, l = ncol(X) ) ){
   stopifnot( nrow(X) == length(y) )
   stopifnot( ncol(X) == length(grid) )
   C <- cbind( rep(1, length(y) ), covariates )  # scalar predictors
@@ -64,16 +64,36 @@ getBasis <- function( L, grid ){
 #' @export
 predict.funcReg <- function( object, newdata = seq(0,1, l = 150), type = "omega"){
   basis <- getBasis( object$L, grid = newdata )
-  return( basis %*% object$functionalCoeff )
+  omega <- basis %*% object$functionalCoeff
+  return( list( omega = omega ) )
 }
 
 
 #' @export
-plot.funcReg <- function(object){
+plot.funcReg <- function(object, ... ){
   grid <- seq(0,1, l = 150)
-  plot( predict(object ) ~ grid, lwd = 2, type = "l" )
+  plot( predict(object)$omega ~ grid, lwd = 2, type = "l", ... )
 }
 
+#' @export
+getMSE <- function(fit){
+  omega <- predict(fit)$omega
+  yhat_omega <- fit$delta * fit$X %*% omega / ncol(fit$X)
+  yhat_C <- fit$C %*% as.vector( fit$covariatesCoeff )
+  mean( (fit$y - yhat_omega - yhat_C )^2 )
+}
+
+
+
+
+#' @export
+getResidualRsquared <- function(fit){
+  omega <- predict(fit)$omega
+  ehat <- fit$y  - fit$C %*% as.vector( fit$covariatesCoeff )
+  dy_omega <- fit$delta * fit$X %*% omega / ncol(fit$X)
+  R2 <- mean( ( dy_omega - ehat)^2 )
+  
+}
 
 
 
@@ -98,9 +118,9 @@ plot.funcReg <- function(object){
 #' @param L  Number of B-splines basis to approximate omega.
 #' @return An list containing estimates for alpha, delta, beta, gamma, sigma2, and omega.
 #' @export
-bootFunReg <- function( y, X, grid, covariates = NULL, L = 6, nBoot = 100 ){
+bootFunReg <- function( y, X, covariates = NULL, L = 6, grid = seq(0,1, l = ncol(X) ), nBoot = 100 ){
   statistic <- function( y, indices ){
-    out <- funcReg( y[indices], X[indices, ], grid, L = L )
+    out <- funcReg( y[indices], X[indices, ], grid = grid, L = L )
     c( out$delta, out$functionalCoeff, out$covariatesCoeff )
   }
   bootSamples <- boot::boot( data = y, statistic, R = nBoot )$t
@@ -116,26 +136,25 @@ bootFunReg <- function( y, X, grid, covariates = NULL, L = 6, nBoot = 100 ){
 
 
 #' @export
-predict.bootFunReg <- function( object, newdata = seq(0,1, l = 150), type = "omega" ){
+predict.bootFunReg <- function( object, newdata = seq(0,1, l = 150) ){
   L <- object$L
   basis <- getBasis( L, grid = newdata )
   beta_index <- 1:L + 1
-  omega_mean <- basis %*% object$bootSamples_mean[beta_index ]
+  omega <- basis %*% object$bootSamples_mean[beta_index ]
   omega_sd <- sqrt( diag( basis %*% object$bootSamples_var[beta_index,  beta_index ] %*% t( basis ) ) )
-  return( list( omega_mean = omega_mean, omega_sd = omega_sd, grid = grid ) )
+  omega_all <- basis %*% t( object$bootSamples[, beta_index ] )
+  omega_ci <- apply( omega_all, 1, quantile, probs = c(0.025, 0.975) )
+  return( list( omega = omega, omega_sd = omega_sd, omega_ci = omega_ci, grid = grid ) )
 }
 
 
 #' @export
-plot.bootFunReg <- function(object){
+plot.bootFunReg <- function(object, ylim = range( pred$omega_ci ), ... ){
   grid <- seq(0,1, l = 150)
   pred <- predict(object, grid)
-  upperBand <- pred$omega_mean + 1.96 * pred$omega_sd
-  lowerBand <- pred$omega_mean - 1.96 * pred$omega_sd
-  ylim <- c( min(lowerBand), max(upperBand) )
-  plot( pred$omega_mean ~ grid, lwd = 2, type = "l", col = "blue", ylim = ylim )
-  lines( upperBand ~ grid, col = "lightblue" )
-  lines( lowerBand ~ grid, col = "lightblue" )
+  plot( pred$omega ~ grid, lwd = 2, type = "l", col = "blue", ylim = ylim, ...  )
+  lines( pred$omega_ci[1, ] ~ grid, col = "lightblue" )
+  lines( pred$omega_ci[2, ] ~ grid, col = "lightblue" )
 }
 
 
