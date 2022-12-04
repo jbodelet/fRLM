@@ -5,6 +5,7 @@ data {
   vector[n] y;
   matrix[n,L] eta;
   real<lower=0> beta_par;
+  real<lower=0> alpha_par;
   matrix[n,d] C;
 }
 
@@ -22,7 +23,7 @@ model {
   beta ~ dirichlet( rep_vector( beta_par / L, L ) );
   sigma ~ lognormal(0,1);
   for ( j in 1:d )
-    alpha[j] ~ normal(0, 10);
+    alpha[j] ~ normal(0, alpha_par);
   //The likelihood
   for (i in 1:n)
     y[i] ~ normal( delta * eta[i] * beta + C[i] * alpha, sigma^2 );

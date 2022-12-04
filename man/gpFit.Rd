@@ -26,9 +26,6 @@ gpFit(
 
 \item{nugget}{Nugget parameter for stable inversion of the correlation matrix.}
 }
-\value{
-
-}
 \description{
 Fit a Gaussian process regression with penalyzed likelihood.
 }

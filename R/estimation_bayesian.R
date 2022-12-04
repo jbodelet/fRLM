@@ -9,6 +9,7 @@
 #' @param grid A vector of the points at which the functions are evaluated.
 #' @param covariates A matrix of covariates.
 #' @param beta_par Hyperparameter of the dirichlet prior of beta.
+#' @param alpha_par Variance yperparameter of the prior of alpha.
 #' @param L  Number of B-splines basis to approximate omega.
 #' @param ... Optional parameters to pass to the stan function.
 #' @return An list containing estimates for alpha, delta, beta, gamma, and sigma2.
@@ -37,13 +38,13 @@
 #' # 3) Bayesian Estimation:
 #' fitBayes <- funcReg_bayes( y, condMu, warmup = 500, iter = 1000, chains = 2 )
 #' plot(fitBayes)
-funcReg_bayes <- function( y, X, L = 5, covariates = NULL, beta_par = 1, grid = seq(0,1, l = ncol(X) ), ... ){
+funcReg_bayes <- function( y, X, L = 5, covariates = NULL, alpha_par = 1, beta_par = 1, grid = seq(0,1, l = ncol(X) ), ... ){
   stopifnot( nrow(X) == length(y) )
   C <- cbind( rep(1, length(y) ), covariates )  # scalar predictors
   basis <- getBasis( L, grid )
   Int_XtimesBasis <- X %*% basis / ncol(X)
   # Stan:
-  dat <- list( n = length(y), L = L, d = ncol(C), y = y, eta = Int_XtimesBasis, beta_par = beta_par, C = C )
+  dat <- list( n = length(y), L = L, d = ncol(C), y = y, eta = Int_XtimesBasis, alpha_par = alpha_par, beta_par = beta_par, C = C )
   fileName <- "plugin.stan"
   stanFile <- system.file("stan", fileName, package = "fRLM")
   fit <- rstan::stan( file = stanFile, data = dat, ... )

@@ -9,6 +9,7 @@ funcReg_bayes(
   X,
   L = 5,
   covariates = NULL,
+  alpha_par = 1,
   beta_par = 1,
   grid = seq(0, 1, l = ncol(X)),
   ...
@@ -22,6 +23,8 @@ funcReg_bayes(
 \item{L}{Number of B-splines basis to approximate omega.}
 
 \item{covariates}{A matrix of covariates.}
+
+\item{alpha_par}{Variance yperparameter of the prior of alpha.}
 
 \item{beta_par}{Hyperparameter of the dirichlet prior of beta.}
 
