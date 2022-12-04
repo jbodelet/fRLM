@@ -37,7 +37,7 @@ devtools::install_github("jbodelet/fRLM")
 
 
 
-```{r setup}
+```{r setup, echo = FALSE}
 library(fRLM)
 library(dplyr)
 # parallel computing for the bayesian fit:
