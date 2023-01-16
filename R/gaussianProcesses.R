@@ -34,7 +34,7 @@ generateGaussianProcess <- function( mu = NULL, kernelFunc = NULL, sig2 = 1, gri
 #' @param optimizationRange A vector containing the end-points of the interval to be searched.
 #' @param power Power parameter for the exponential kernel.
 #' @param nugget Nugget parameter for stable inversion of the correlation matrix.
-#' @return
+#' @return  An list containing estimates
 #' @export
 #' @examples 
 #'   gp <- generateGaussianProcess()
