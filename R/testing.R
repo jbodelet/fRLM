@@ -122,7 +122,7 @@ get_FCI <- function( post_w ){
   colnames(ordering) <- "H"
   post <- as_tibble( ordering ) %>% group_by(H) %>% 
     count %>% mutate(Hp = n/n_samp, M = "M0") %>% 
-    select(-n, Hp, H, M) %>% ungroup %>% list
+    dplyr::select(-n, Hp, H, M) %>% ungroup %>% list
   # ALGORITHM 1
   max_ranking <- get_fco_det(post) # initialize at max probability full ranking
   if(nrow(max_ranking) != 1){ #  why do I have several max rankings sometimes?
