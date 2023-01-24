@@ -18,7 +18,7 @@ parameters {
 model {
   // the priors 
   delta ~ normal(0, 10);
-  weights ~ dirichlet( rep_vector( 1/J, J ) );
+  weights ~ dirichlet( rep_vector( 1.0/J, J ) );
   sigma ~ lognormal(1,1);
   for ( j in 1:d )
     alpha[j] ~ normal(0, 1);
