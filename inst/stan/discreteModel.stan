@@ -13,18 +13,20 @@ parameters {
   simplex[J] weights;
   vector[d] alpha;
   real<lower=0> sigma;
+  real<lower=0> nu;
 }
 
 model {
   // the priors 
   delta ~ normal(0, 10);
-  weights ~ dirichlet( rep_vector( 1, J ) );
-  sigma ~ lognormal(0,1);
+  weights ~ dirichlet( rep_vector( 1/J, J ) );
+  sigma ~ lognormal(1,1);
+  nu ~ gamma(2, 0.1);
   for ( j in 1:d )
-    alpha[j] ~ normal(0, 10);
+    alpha[j] ~ normal(0, 1);
   //The likelihood
   for (i in 1:n)
-    y[i] ~ normal( delta * x[i] * weights + C[i] * alpha, sigma^2 );
+    y[i] ~ student_t( nu, delta * x[i] * weights + C[i] * alpha, sigma^2 );
 }
 
 
