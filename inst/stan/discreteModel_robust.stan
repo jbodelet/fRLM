@@ -19,7 +19,7 @@ parameters {
 model {
   // the priors 
   delta ~ normal(0, 10);
-  weights ~ dirichlet( rep_vector( 1/J, J ) );
+  weights ~ dirichlet( rep_vector( 1.0/J, J ) );
   sigma ~ lognormal(1,1);
   nu ~ gamma(2, 0.1);
   for ( j in 1:d )
