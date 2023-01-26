@@ -1,0 +1,44 @@
+data {
+  int<lower=0> n;
+  int<lower=0> n_obs;
+  int<lower=0> J;
+  int<lower=0> K;
+  int<lower=1> d;
+  vector[n] y;
+  vector[n_obs] z_obs; // observed income
+  matrix[n, J] x;
+  matrix[n, K] u;
+  matrix[n,d] C;
+}
+transformed data {
+  int n_mis = n - n_obs;
+  matrix[n_obs,K] u_obs = u[1:n_obs];
+  matrix[n_mis,K] u_mis = u[(n_obs+1):];
+}
+parameters {
+  real delta;
+  simplex[J] weights;
+  vector[K] lambda;
+  vector[n_mis] z_mis;
+  real<lower=0> sigma;
+  real<lower=0> sigma_z;
+  vector[d] alpha;
+}
+model {
+  vector[n] z = append_row(z_obs, z_mis);
+  matrix[n,J] xnew = x;
+  xnew[,1] = z + xnew[,1];
+  // prior
+  delta ~ normal(0, 10);
+  weights ~ dirichlet( rep_vector( 1.0/J, J ) );
+  sigma ~ lognormal(1,1);
+  sigma_z ~ lognormal(1,1);
+  for ( k in 1:K )
+    lambda[k] ~ normal(0, 1);
+  for ( j in 1:d )
+    alpha[j] ~ normal(0, 1);
+  z_mis ~ normal(u_mis * lambda, sigma_z^2);
+  // likelihood for observed Y
+  z_obs ~ normal(u_obs * lambda, sigma_z^2);
+  y ~ normal(delta * xnew * weights + C * alpha, sigma^2 );
+}

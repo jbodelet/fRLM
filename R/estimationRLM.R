@@ -33,4 +33,22 @@ fitRLM <- function(y, x, covariates = NULL, robust = FALSE, ...){
 }
 
 
+#' @export
+fitRLM_missingIncome <- function(y, x, income_obs, predOfIncome, covariates = NULL, robust = FALSE, ...){
+  n_obs <- length(income_obs)
+  z_obs <- income_obs
+  u <- predOfIncome
+  C <- cbind( rep(1, length(y) ), covariates )  # scalar predictors
+  dat <- list( n = length(y), n_obs = n_obs, J = ncol(x), K = ncol(u), d = ncol(C), y = y, z_obs = z_obs, 
+               x = x, u = u, C = C )
+  if(robust){
+    fileName <- "discreteModel_robust_missing_income.stan"
+  }else{
+    fileName <- "discreteModel_missing_income.stan"
+  }
+  stanFile <- system.file("stan", fileName, package = "fRLM")
+  fit <- rstan::stan( file = stanFile, data = dat, ...)
+}
+
+
 
