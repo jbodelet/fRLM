@@ -42,7 +42,7 @@ fitRLM_missingIncome <- function(y, x, z_obs, u, covariates = NULL, robust = FAL
   obs_index <- (1:n)[!is.na( z_obs )]
   miss_index <- (1:n)[is.na( z_obs )]
   new_index <- c(obs_index, miss_index)
-  dat <- list(n = n, n_obs = n_obs, J = J, K = K, d = d, y = y[new_index], z_obs = z_obs[new_index][1:n_obs], 
+  dat <- list(n = n, n_obs = n_obs, J = J, K = K, d = ncol(C), y = y[new_index], z_obs = z_obs[new_index][1:n_obs], 
               x = x[new_index, ], u = u[new_index, ], C = as.matrix(C[new_index,] ) )
   if(robust){
     fileName <- "discreteModel_robust_missing_income.stan"
