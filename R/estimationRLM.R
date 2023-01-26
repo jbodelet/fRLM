@@ -36,7 +36,7 @@ fitRLM <- function(y, x, covariates = NULL, robust = FALSE, ...){
 #' @export
 fitRLM_missingIncome <- function(y, x, z_obs, u, covariates = NULL, robust = FALSE, ...){
   n <- length(y)
-  n_obs <- length(income_obs)
+  n_obs <- sum( !is.na(z_obs) )
   C <- cbind( rep(1, length(y) ), covariates )  # scalar predictors
   # data:
   obs_index <- (1:n)[!is.na( z_obs )]
