@@ -4,12 +4,14 @@
 \alias{fitRLM}
 \title{DISCRETE RELEVANT LIFE COURSE MODEL}
 \usage{
-fitRLM(y, x, covariates = NULL, ...)
+fitRLM(y, x, covariates = NULL, robust = FALSE, ...)
 }
 \arguments{
 \item{y}{The output vector.}
 
 \item{x}{A n times M matrix containing the n functions evaluated at points specified in grid.}
+
+\item{robust}{If TRUE, use a t-distribution as a likelihood.}
 
 \item{...}{Optional parameters to pass to the stan function.}
 
