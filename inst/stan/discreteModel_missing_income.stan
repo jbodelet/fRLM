@@ -37,8 +37,11 @@ model {
     lambda[k] ~ normal(0, 1);
   for ( j in 1:d )
     alpha[j] ~ normal(0, 1);
-  z_mis ~ normal(u_mis * lambda, sigma_z^2);
+  for(i in 1:n_mis)
+    z_mis[i] ~ normal(u_mis[i] * lambda, sigma_z^2);
   // likelihood for observed Y
-  z_obs ~ normal(u_obs * lambda, sigma_z^2);
-  y ~ normal(delta * xnew * weights + C * alpha, sigma^2 );
+  for(i in 1:n_obs)
+    z_obs[i] ~ normal(u_obs[i] * lambda, sigma_z^2);
+  for (i in 1:n)
+    y[i] ~ normal(delta * xnew[i] * weights + C[i] * alpha, sigma^2 );
 }
