@@ -84,6 +84,8 @@ plot.funcRegBayes <- function(object, ylim = range( pred$omega_ci ), ...){
   lines( pred$omega_ci[2, ] ~ grid, col = "lightblue" )
 }
 
+
+#' @export
 getBasis <- function( L, grid ){
   knots <- seq(0, 1, length.out = L - 2 )
   return( t( bsplinePsd::dbspline( grid, knots = knots ) ) )  # basis for omega
