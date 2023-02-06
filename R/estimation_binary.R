@@ -1,4 +1,4 @@
-#' @examples 
+#' @export
 simulateFRLM_binary <- function (n = 100, alpha = 0, delta = 3, omega = function(t) {4 * t^3}, gpStd = 1){
   functionalCovariates <- replicate(n, generateGaussianProcess(sig2 = gpStd))
   predictors <- sapply(functionalCovariates, function(X) {
@@ -121,7 +121,6 @@ myIntegrate2 <- function(fun, from = 0, to = 1 ){
 #' @param ... Optional parameters to pass to the stan function.
 #' @return An list containing estimates for alpha, delta, beta, gamma, and sigma2.
 #' @export
-#' @examples 
 #' @examples 
 #' library(fRLM)
 #' library(dplyr)
