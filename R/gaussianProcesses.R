@@ -15,9 +15,9 @@
 #'   plot(gpHat)
 generateGaussianProcess <- function( mu = NULL, kernelFunc = NULL, sig2 = 1, gridLength = 100 ){
   if( is.null( mu ) ){ mu   <- zeroFunction }
-  if( is.null(kernelFunc) ){ kernelFunc <- function(t,s) expoKernelMat(t,s, beta = 1) }
+  if( is.null(kernelFunc) ){ kernelFunc <- function(t,s) expoKernelMat(t,s, beta = 1, sigma2 = sig2 ) }
   grid <- seq( 0, 1, l = gridLength)
-  VarMat <- sig2 * kernelFunc(grid, grid)
+  VarMat <- kernelFunc(grid, grid)
   gp <- MASS::mvrnorm( mu = mu(grid), Sigma = VarMat )  # much faster!
   return( approxfun(grid, gp ) )
 }
@@ -54,8 +54,9 @@ gpFit <- function( tobs, Xobs, lambda = 0.01, optimizationRange = c(-2, 4), powe
   # Optimization:
   opt <- optimize( penalyzedLoss, optimizationRange )
   beta <- opt$min
-  mu <- getMuHat(beta, tobs)
-  sig2 <- getSigmaHat( Xobs, mu, getCorrMat(beta, tobs, nugget) )
+  corrMat <- getCorrMat( beta, tobs, nugget)
+  mu <- getMuHat(corrMat, tobs)
+  sig2 <- getSigmaHat( Xobs, mu, corrMat )
   # Output:
   out <- list( tobs = tobs, Xobs = Xobs, beta = beta, sig2 = sig2, mu = mu,
                nugget = nugget, power = power, lambda = lambda, 
@@ -72,6 +73,9 @@ gpFit <- function( tobs, Xobs, lambda = 0.01, optimizationRange = c(-2, 4), powe
 # METHODS:
 #==================
 
+
+
+
 #' @export
 predict.gpFit <- function( object, tnew = object$tobs ){
   N <- length(object$Xobs)
@@ -79,7 +83,7 @@ predict.gpFit <- function( object, tnew = object$tobs ){
   tobs <- object$tobs
   corrMatObs <- getCorrMat(object$beta, tobs, object$nugget)
   mu <- getMuHat(corrMatObs, tobs)
-  corrMatNewWithObs <- expoKernelMat( tnew, tobs, object$beta )
+  corrMatNewWithObs <- expoKernelMat( tnew, tobs, object$beta, 1 )
   Xnew <- rep(mu,M) + corrMatNewWithObs %*% solve(corrMatObs) %*% ( object$Xobs - rep(mu,N) )
   return( c(Xnew) )
 }
@@ -89,7 +93,7 @@ plot.gpFit <- function(object){
   grid <- seq(0,1, l = 150)
   pred <- predict(object, grid)
   kernel <- getCondKernelFunc(object)
-  std <- sqrt( object$sig2 * diag(kernel(grid, grid) ) )
+  std <- sqrt( diag(kernel(grid, grid) ) )
   upperBand <- pred + 1.96 * std
   lowerBand <- pred - 1.96 * std
   ylim <- c( min(lowerBand), max(upperBand) )
@@ -97,8 +101,9 @@ plot.gpFit <- function(object){
   points( object$Xobs ~ object$tobs, col = "red", lwd = 4 )
   lines( upperBand ~ grid, col = "lightblue")
   lines( lowerBand ~ grid, col = "lightblue")
-  
+  invisible(std)
 }
+
 
 #' @export
 lines.gpFit <- function(object){
@@ -125,30 +130,30 @@ getCondMuFunc <- function( gpfit, gridLength = 150){
 }
 
 
+
+
 getCondKernelFunc <- function( gpfit ){
   tobs <- gpfit$tobs
-  kern <- function(t,s) expoKernelMat( t, s, gpfit$beta )
-  invCorrMat <- solve( expoKernelMat( tobs, tobs, gpfit$beta ) )
-  return( function(t, s) pmax( kern(t, s) - kern(t, tobs) %*% invCorrMat %*% kern(tobs, s ), 0 ) )  # sometimes, gets negative, when t is close to 0.
+  kern <- function(t,s) expoKernelMat( t, s, gpfit$beta, sigma2 = gpfit$sig2 )
+  invCovMat <- solve( expoKernelMat( tobs, tobs, gpfit$beta, sigma2 = gpfit$sig2 ) )
+  return( function(t, s) pmax( kern(t, s) - kern(t, tobs) %*% invCovMat %*% kern(tobs, s ), 0 ) )  # sometimes, gets negative, when t is close to 0.
 }
 
 
-expoKernelMat <- function(xvec, yvec, beta, power = 1.96 ){
-  do.call( rbind, lapply( xvec, function(x) expoKernel( x, yvec, beta, power ) ) )
+expoKernelMat <- function(xvec, yvec, beta, sigma2, power = 1.96 ){
+  do.call( rbind, lapply( xvec, function(x) expoKernel( x, yvec, beta, sigma2, power ) ) )
 }
 
-expoKernel <- function( x, y, beta, power = 1.96 ){ exp( -10^beta * abs( x - y )^power ) } 
+expoKernel <- function( x, y, beta, sigma2 = 1, power = 1.96 ){ sigma2 * exp( -10^beta * abs( x - y )^power ) } 
 
 zeroFunction <- Vectorize( function(x) 0  )
 
-getCorrMat  <- function(beta, tobs, nugget = 0 ) expoKernelMat( tobs, tobs, beta ) + nugget * diag(length(tobs))
+# corr is not kernel!!
+getCorrMat  <- function(beta, tobs, nugget = 0 ) expoKernelMat( tobs, tobs, beta, 1 ) + nugget * diag(length(tobs))
 
 getMuHat    <- function( corrMat, tobs ){ sum( solve( corrMat ) %*% tobs ) / sum( solve( corrMat ) ) }
 
 getSigmaHat <- function( Xobs, muHat, corrMat ) as.numeric( t( Xobs - muHat ) %*% solve( corrMat ) %*% (Xobs - muHat ) / length(Xobs) )
-
-
-
 
 
 
@@ -163,9 +168,9 @@ if(0){
   gp <- generateGaussianProcess()
   tobs <- sort(runif(5))
   Xobs <- gp(tobs)
-  gpHat <- gpFit(tobs, Xobs)
-  plot(gpHat)
-
+  object <- gpFit(tobs, Xobs)
+  plot(object)
+  
   # Redo it:
   # # Test for getCondKernelFunc:
   # grid <- seq(0,1, l = 150)

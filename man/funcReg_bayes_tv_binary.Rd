@@ -73,9 +73,9 @@ grid <- seq(0,1, l = 150 )
 sim <- simulateFRLM_tv_binary( n, alpha = alpha, delta = delta, omega = omega )
 tobs <- lapply( 1:n, function(i){
   u <- runif( Nvec[i], min = 0.3, max = 0.7)
-  cumsum(u) / sum(u) * sim$lastExpo[i]
+  cumsum(u) / sum(u) * sim$TimeOfMeasurement[i]
 })
-# tobs <- c( sort( runif( Nvec[i] - 1, max = sim$lastExpo[i] ) ), sim$lastExpo[i] ) 
+# tobs <- c( sort( runif( Nvec[i] - 1, max = sim$TimeOfMeasurement[i] ) ), sim$TimeOfMeasurement[i] ) 
 Xobs <- lapply( 1:n, function(i) round( sim$functionalCovariates[[i]]( tobs[[i]] ), 3 ) )
 
 # 2) Fit gaussian processes:
@@ -88,7 +88,7 @@ plot(gpfitList[[ sample(1:n, 1)]])
 # plot(fit)
 # lines(omega(grid) ~ grid)
 
-fit2 <- funcReg_bayes_tv_binary(sim$y, pred, sim$lastExpo, warmup = 2000, iter = 4000 )
+fit2 <- funcReg_bayes_tv_binary(sim$y, pred, sim$TimeOfMeasurement, warmup = 2000, iter = 4000 )
 plot(fit2)
 lines(omega(grid) ~ grid)
 
