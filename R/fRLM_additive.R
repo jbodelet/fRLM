@@ -1,4 +1,3 @@
-library(abind)
 #' fRLM Function
 #'
 #' Wrapper function that estimates a Functional Regression Linear Model (fRLM) with a given set of predictors.
@@ -79,7 +78,7 @@ fRLM <- function(data, id, time, exposures, outcome, controls=NULL, L=5, alpha_p
   basis <- getBasis( L, grid )
   eta_list <- lapply(condMu, function(X) X %*% basis / ncol(X))
   # get them in a p x n x L array
-  eta <- abind(eta_list, along=0)
+  eta <- abind::abind(eta_list, along=0)
 
   # Compile the controls
   C <- data %>% group_by(!!sym(id)) %>% summarise(across(all_of(controls), ~mean(.))) %>% ungroup() %>%

@@ -60,7 +60,7 @@ The fitted model and other relevant information is then returned as a list.
 # Example usage of the fRLM function
 library(fRLM)
 data(toy)
-fRLM(data=toy,
+output <- fRLM(data=toy,
   id = "id",
   time="age",
   exposures="exposure",
