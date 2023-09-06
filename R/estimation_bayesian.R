@@ -47,7 +47,6 @@ funcReg_bayes <- function( y, X, L = 5, covariates = NULL, alpha_par = 1, beta_p
   dat <- list( n = length(y), L = L, d = ncol(C), y = y, eta = Int_XtimesBasis, alpha_par = alpha_par, beta_par = beta_par, C = C )
   fileName <- "plugin.stan"
   stanFile <- system.file("stan", fileName, package = "fRLM")
-  browser()
   fit <- rstan::stan( file = stanFile, data = dat, ... )
   # output:
   alpha <- rstan::extract(fit, 'alpha')[[1]]

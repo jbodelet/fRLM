@@ -43,12 +43,13 @@
 
 fRLM <- function(data, id, time, exposures, outcome, controls=NULL, L=5, alpha_par=1, beta_par=1, ...) {
   # Create the time scaler. This function scales the data down and back to the original scale
-  timeScaler <- timeScaler_ff(data %>% pull(!!sym(time)), min=0.05, max=0.95)
+  timeScaler <- timeScaler_ff(data %>% pull(!!sym(time)), min=0.06, max=0.93)
   # Standardize time
   data <- data %>% mutate(!!time := timeScaler(data[[time]]))
 
   # Define the grid
   grid <- seq(0,1, l = 150 )
+  grid_original_scale <- timeScaler(grid, original_scale = TRUE)
 
   # Fit the gaussian processes for each exposure
   condMu <- list()
@@ -105,8 +106,13 @@ fRLM <- function(data, id, time, exposures, outcome, controls=NULL, L=5, alpha_p
   beta  <- rstan::extract(fit, 'beta')[[1]]
   delta <- rstan::extract(fit, 'delta')[[1]]
   sigma <- rstan::extract(fit, 'sigma')[[1]]
-  out <- list( fit = fit, condMu = condMu, delta = delta, alpha = alpha, beta = beta, sigma = sigma, basis = basis, L = L, data=data, timeScaler=timeScaler)
-  class(out) <- "funcRegBayes"
+
+
+
+  out <- list( fit = fit, condMu = condMu, delta = delta, alpha = alpha, beta = beta, sigma = sigma, grid=grid, grid_original_scale=grid_original_scale, basis = basis, L = L, data=data, timeScaler=timeScaler, dim=dim, exposures=exposures)
+  class(out) <- "additive_fRLM"
+
+  out$w <- predict(out)
 
   return(out)
 }
@@ -175,6 +181,74 @@ timeScaler_ff <- function(time, min=0, max=1) {
   }
 
   return(timeScaler)
+}
+
+# multiply the output
+multiply_slices <- function(A, B) {
+  # Check dimensions of A and B
+  if (dim(A)[2] != dim(B)[1] || dim(A)[3] != dim(B)[2]) {
+    stop("Dimensions of A and B are not compatible for multiplication.")
+  }
+
+  # Extract the dimensions for result C
+  dim1 <- dim(A)[2]
+  dim2 <- dim(A)[1]
+  dim3 <- dim(B)[1]
+
+  # Initialize C
+  C <- array(0, dim = c(dim1, dim2, dim3))
+
+  # Perform matrix multiplication for each slice
+  for (i in 1:dim1) {
+    C[i,,] <- A[,i,] %*% t(B)
+  }
+
+  return(C)
+}
+
+
+
+
+
+# S3 methods
+
+#' @export
+predict.additive_fRLM <- function( object, returnALL = FALSE ){
+  out <- list()
+  for (i in seq_along(object$exposures)) {
+    L <- object$L
+    basis <- object$basis
+    beta <- object$beta[,i,]
+    omega_all <- basis %*% t(beta)
+    omega <- rowMeans(omega_all)
+    omega_ci <- apply( omega_all, 1, quantile, probs = c(0.025, 0.975) )
+    out_i <- list( omega = omega, omega_ci = omega_ci)
+    if(returnALL){
+      out_i$omega_all <- omega_all
+    }
+    out[[object$exposures[i]]] <- out_i
+  }
+  return( out )
+}
+
+
+#' @export
+plot.additive_fRLM <- function(object, ...){
+  grid <- object$grid_original_scale
+  pred <- predict(object)
+  y_max <- max(unlist(lapply(pred, function(x) max(unlist(x)))))
+  y_min <- min(unlist(lapply(pred, function(x) min(unlist(x)))))
+  if (length(pred) > 1) {
+    par(ask = TRUE)
+  }
+  for (i in 1:length(pred)) {
+    plot( pred[[i]]$omega ~ grid, lwd = 2, type = "l", col = "blue", ylim=c(y_min, y_max), ... )
+    lines( pred[[i]]$omega_ci[1, ] ~ grid, col = "lightblue" )
+    lines( pred[[i]]$omega_ci[2, ] ~ grid, col = "lightblue" )
+  }
+  if (length(pred) > 1) {
+    par(ask = FALSE)
+  }
 }
 
 
