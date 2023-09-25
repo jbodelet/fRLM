@@ -8,6 +8,7 @@
 #' @param exposures A character vector of strings representing the exposure variables in the dataframe.
 #' @param outcome A string representing the outcome variable in the dataframe.
 #' @param controls A character vector of strings representing the control variables in the dataframe. Default is NULL.
+#' @param grouping A data-frame with the same variable name for respondent identification, and as many columns as there are exposures to the random effect, in chronological order. It is understood that the time-increment is constant between exposures.
 #' @param L An integer representing the number of basis functions. Default is 5.
 #' @param alpha_par A numeric value for the alpha hyperparameter. Default is 1.
 #' @param beta_par A numeric value for the beta hyperparameter. Default is 1.
@@ -29,7 +30,7 @@
 #'
 #' @examples
 #'
-#' # Example usage of the fRLM function
+#' # Minimal example usage of the fRLM function
 #' library(fRLM)
 #' data(toy)
 #' output <- fRLM(data=toy,
@@ -39,9 +40,45 @@
 #'   outcome="outcome",
 #'   warmup = 500, iter = 1000, chains = 2) # this is passed to stan
 #'
+#' # Example with more exposures and random effects
+#'
+#'
+#' # Example usage of the fRLM function
+#'
+#' library(fRLM)
+#' set.seed(1234)
+#' data(toy)
+#'
+#' toy2 <- toy
+#' # Add an unrelated exposure
+#' toy2$exposure2 <- round(rnorm(nrow(toy)),2)
+#' # Add a grouping
+#' grouping <- unique(toy2$id) %>% as_tibble() %>% rename(id=value)
+#' grouping <- grouping %>% mutate(group = 1 + (runif(n()) <0.5)*1)
+#'
+#' # Modify the outcome to add random effects
+#' add_to_outcome <- grouping %>% mutate(to_add=ifelse(group==1, -0.5, +0.5)) %>% dplyr::select(id, to_add)
+#' toy2 <- toy2 %>% left_join(add_to_outcome) %>% mutate(outcome = outcome + to_add) %>% select(-to_add)
+#'
+#'
+#' output <- fRLM(data=toy2,
+#'                id = "id",
+#'                time="age",
+#'                exposures=c("exposure", "exposure2"),
+#'                grouping = grouping,
+#'                outcome="outcome",
+#'                warmup = 1000, iter = 2000, chains = 2) # this is passed to stan
+#'
+#'
+#' samples <- rstan::extract(output$fit, permuted = TRUE)
+#' # Create confidence intervals for delta (effect size of exposures)
+#' apply(output$delta, 2, function(x) quantile(x, c(0.025, 0.975)))
+#'
+#' plot(output)
+
 #' @export
 
-fRLM <- function(data, id, time, exposures, outcome, controls=NULL, L=5, alpha_par=1, beta_par=1, ...) {
+fRLM <- function(data, id, time, exposures, outcome, controls=NULL, grouping=NULL, L=5, alpha_par=1, beta_par=1, ...) {
   # Create the time scaler. This function scales the data down and back to the original scale
   timeScaler <- timeScaler_ff(data %>% pull(!!sym(time)), min=0.06, max=0.93)
   # Standardize time
@@ -65,7 +102,8 @@ fRLM <- function(data, id, time, exposures, outcome, controls=NULL, L=5, alpha_p
   # Extract quantities
   # ------------------
   # Extract y
-  y <- data %>% group_by(!!sym(id)) %>% summarise(outcome = mean(!!sym(outcome))) %>% pull(outcome)
+  y_with_id <- data %>% group_by(!!sym(id)) %>% summarise(outcome = mean(!!sym(outcome)))
+  y <- y_with_id %>% pull(!!sym(outcome))
 
   # Declare the dimensions
   dim <- list(
@@ -74,6 +112,7 @@ fRLM <- function(data, id, time, exposures, outcome, controls=NULL, L=5, alpha_p
     "p" = length(exposures),
     "d" = length(controls) + 1
   )
+
 
   # Compile the array of exposures
   basis <- getBasis( L, grid )
@@ -98,18 +137,77 @@ fRLM <- function(data, id, time, exposures, outcome, controls=NULL, L=5, alpha_p
     alpha_par = alpha_par,
     beta_par = beta_par
   ))
-  fileName <- "fRLM_additive.stan"
-  stanFile <- system.file("stan", fileName, package = "fRLM")
-  fit <- rstan::stan( file = stanFile, data = data_stan, ...)
-  # output:
-  alpha <- rstan::extract(fit, 'alpha')[[1]]
-  beta  <- rstan::extract(fit, 'beta')[[1]]
-  delta <- rstan::extract(fit, 'delta')[[1]]
-  sigma <- rstan::extract(fit, 'sigma')[[1]]
 
 
+  if(is.null(grouping)) {
+    fileName <- "fRLM_additive.stan"
+    stanFile <- system.file("stan", fileName, package = "fRLM")
+    fit <- rstan::stan( file = stanFile, data = data_stan, ...)
+    # output:
+    alpha <- rstan::extract(fit, 'alpha')[[1]]
+    beta  <- rstan::extract(fit, 'beta')[[1]]
+    delta <- rstan::extract(fit, 'delta')[[1]]
+    sigma <- rstan::extract(fit, 'sigma')[[1]]
 
-  out <- list( fit = fit, condMu = condMu, delta = delta, alpha = alpha, beta = beta, sigma = sigma, grid=grid, grid_original_scale=grid_original_scale, basis = basis, L = L, data=data, timeScaler=timeScaler, dim=dim, exposures=exposures)
+    out <- list(
+      fit = fit,
+      condMu = condMu,
+      delta = delta,
+      alpha = alpha,
+      beta = beta,
+      sigma = sigma,
+      grid=grid,
+      grid_original_scale=grid_original_scale,
+      basis = basis,
+      L = L,
+      data=data,
+      timeScaler=timeScaler,
+      dim=dim,
+      exposures=exposures)
+
+  } else {
+    # Create the grouping matrix and data relevant to groupings
+    groups_matrix <- y_with_id %>% dplyr::select(!!sym(id)) %>% left_join(grouping, by = join_by(!!sym(id))) %>% select(-!!sym(id)) %>% as.matrix()
+
+    # add dimensions
+    grouping_T <- dim(groups_matrix)[2]
+    grouping_S <- length(unique(grouping$group))
+
+    data_stan <- c(data_stan, list(T = grouping_T, S= grouping_S, Sigma=groups_matrix))
+
+
+    fileName <- "fRLM_additive_random-effects.stan"
+    stanFile <- system.file("stan", fileName, package = "fRLM")
+    fit <- rstan::stan( file = stanFile, data = data_stan, ...)
+    # output:
+    alpha <- rstan::extract(fit, 'alpha')[[1]]
+    beta  <- rstan::extract(fit, 'beta')[[1]]
+    delta <- rstan::extract(fit, 'delta')[[1]]
+    sigma <- rstan::extract(fit, 'sigma')[[1]]
+    sigma_xi <- rstan::extract(fit, "sigma")[[1]]
+    xi    <- rstan::extract(fit, "xi")[[1]]
+    rho   <- rstan::extract(fit, "rho")[[1]]
+    out <- list(
+      fit = fit,
+      condMu = condMu,
+      delta = delta,
+      alpha = alpha,
+      beta = beta,
+      sigma = sigma,
+      grid=grid,
+      grid_original_scale=grid_original_scale,
+      basis = basis,
+      L = L,
+      data=data,
+      timeScaler=timeScaler,
+      dim=dim,
+      exposures=exposures,
+      xi=xi,
+      rho=rho,
+      sigma_xi=sigma_xi)
+
+  }
+
   class(out) <- "additive_fRLM"
 
   out$w <- predict(out)
@@ -221,8 +319,9 @@ predict.additive_fRLM <- function( object, returnALL = FALSE ){
     beta <- object$beta[,i,]
     omega_all <- basis %*% t(beta)
     omega <- rowMeans(omega_all)
+    omega_median <- apply(omega_all, 1, median)
     omega_ci <- apply( omega_all, 1, quantile, probs = c(0.025, 0.975) )
-    out_i <- list( omega = omega, omega_ci = omega_ci)
+    out_i <- list( omega = omega, omega_ci = omega_ci, omega_median = omega_median)
     if(returnALL){
       out_i$omega_all <- omega_all
     }
@@ -242,7 +341,8 @@ plot.additive_fRLM <- function(object, ...){
     par(ask = TRUE)
   }
   for (i in 1:length(pred)) {
-    plot( pred[[i]]$omega ~ grid, lwd = 2, type = "l", col = "blue", ylim=c(y_min, y_max), ... )
+    plot_name = paste0("Relative importance of life course exposure to ", object$exposures[i], ".")
+    plot( pred[[i]]$omega ~ grid, lwd = 2, type = "l", col = "blue", ylim=c(y_min, y_max), main=plot_name, xlab="age", ylab="",... )
     lines( pred[[i]]$omega_ci[1, ] ~ grid, col = "lightblue" )
     lines( pred[[i]]$omega_ci[2, ] ~ grid, col = "lightblue" )
   }

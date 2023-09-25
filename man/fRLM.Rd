@@ -11,6 +11,7 @@ fRLM(
   exposures,
   outcome,
   controls = NULL,
+  grouping = NULL,
   L = 5,
   alpha_par = 1,
   beta_par = 1,
@@ -29,6 +30,8 @@ fRLM(
 \item{outcome}{A string representing the outcome variable in the dataframe.}
 
 \item{controls}{A character vector of strings representing the control variables in the dataframe. Default is NULL.}
+
+\item{grouping}{A data-frame with the same variable name for respondent identification, and as many columns as there are exposures to the random effect, in chronological order. It is understood that the time-increment is constant between exposures.}
 
 \item{L}{An integer representing the number of basis functions. Default is 5.}
 
@@ -57,7 +60,7 @@ The fitted model and other relevant information is then returned as a list.
 }
 \examples{
 
-# Example usage of the fRLM function
+# Minimal example usage of the fRLM function
 library(fRLM)
 data(toy)
 output <- fRLM(data=toy,
@@ -67,4 +70,39 @@ output <- fRLM(data=toy,
   outcome="outcome",
   warmup = 500, iter = 1000, chains = 2) # this is passed to stan
 
+# Example with more exposures and random effects
+
+
+# Example usage of the fRLM function
+
+library(fRLM)
+set.seed(1234)
+data(toy)
+
+toy2 <- toy
+# Add an unrelated exposure
+toy2$exposure2 <- round(rnorm(nrow(toy)),2)
+# Add a grouping
+grouping <- unique(toy2$id) \%>\% as_tibble() \%>\% rename(id=value)
+grouping <- grouping \%>\% mutate(group = 1 + (runif(n()) <0.5)*1)
+
+# Modify the outcome to add random effects
+add_to_outcome <- grouping \%>\% mutate(to_add=ifelse(group==1, -0.5, +0.5)) \%>\% dplyr::select(id, to_add)
+toy2 <- toy2 \%>\% left_join(add_to_outcome) \%>\% mutate(outcome = outcome + to_add) \%>\% select(-to_add)
+
+
+output <- fRLM(data=toy2,
+               id = "id",
+               time="age",
+               exposures=c("exposure", "exposure2"),
+               grouping = grouping,
+               outcome="outcome",
+               warmup = 1000, iter = 2000, chains = 2) # this is passed to stan
+
+
+samples <- rstan::extract(output$fit, permuted = TRUE)
+# Create confidence intervals for delta (effect size of exposures)
+apply(output$delta, 2, function(x) quantile(x, c(0.025, 0.975)))
+
+plot(output)
 }
