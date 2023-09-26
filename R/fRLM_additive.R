@@ -103,8 +103,8 @@ fRLM <- function(data, id, time, exposures, outcome, controls=NULL, grouping=NUL
   # Extract quantities
   # ------------------
   # Extract y
-  y_with_id <- data %>% group_by(!!sym(id)) %>% summarise(outcome = mean(!!sym(outcome)))
-  y <- y_with_id %>% pull(!!sym(outcome))
+  y_with_id <- data %>% group_by(!!sym(id)) %>% summarise(!!outcome := mean(!!sym(outcome)))
+  y <- y_with_id %>% dplyr::pull(!!sym(outcome))
 
   # Declare the dimensions
   dim <- list(
