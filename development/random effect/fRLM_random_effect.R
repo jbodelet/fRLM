@@ -1,6 +1,7 @@
 # Example usage of the fRLM function
 library(fRLM)
-data(toy)
+library(tidyverse)
+toy <- fRLM::toy
 set.seed(1234)
 
 # Add an unrelated exposure
@@ -13,6 +14,8 @@ grouping <- grouping %>% mutate(group = 1 + (runif(n()) <0.5)*1)
 add_to_outcome <- grouping %>% mutate(to_add=ifelse(group==1, -0.5, +0.5)) %>% dplyr::select(id, to_add)
 toy <- toy %>% left_join(add_to_outcome) %>% mutate(outcome = outcome + to_add) %>% select(-to_add)
 
+toy$exposure[c(10, 25, 38, 52)] <- NA
+toy$exposure2[c(18, 33, 47, 70)] <- NA
 
 output <- fRLM(data=toy,
                id = "id",

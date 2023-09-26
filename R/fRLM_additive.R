@@ -92,7 +92,8 @@ fRLM <- function(data, id, time, exposures, outcome, controls=NULL, grouping=NUL
   condMu <- list()
   for (exposure in exposures) {
     # extract outcome for each exposure
-    subdata <- data %>% filter(!is.na({{exposure}}))
+    is_NA <- is.na(data[[exposure]])
+    subdata <- data %>% dplyr::filter(!is_NA)
     t_obs <- subdata %>% group_by(!!sym(id)) %>% summarise(t_obs = list(!!sym(time))) %>% pull(t_obs)
     expo  <- subdata %>% group_by(!!sym(id)) %>% summarise(expo = list(!!sym(exposure))) %>% pull(expo)
     gpfitList <- lapply( 1:length(t_obs), function(i) gpFit( t_obs[[i]], expo[[i]] ) )
