@@ -103,8 +103,10 @@ fRLM <- function(data, id, time, exposures, outcome, controls=NULL, grouping=NUL
   # Extract quantities
   # ------------------
   # Extract y
+  # y_with_id is the outcome variable along with the id. it is used thoughout the code to ensure that each line of matrices / vectors correspond to the same respondent_id across all different stan input
   y_with_id <- data %>% group_by(!!sym(id)) %>% summarise(!!outcome := mean(!!sym(outcome)))
-  y <- y_with_id %>% dplyr::pull(!!sym(outcome))
+  respondent_id <- y_with_id %>% dplyr::select(!!sym(id)) # tibble with the id: they should consistently appear in that order for all relevant stan inputs
+  y <- y_with_id %>% dplyr::pull(!!sym(outcome)) # TODO keep it a tibble?
 
   # Declare the dimensions
   dim <- list(
@@ -122,7 +124,10 @@ fRLM <- function(data, id, time, exposures, outcome, controls=NULL, grouping=NUL
   eta <- abind::abind(eta_list, along=0)
 
   # Compile the controls
+  # We take the mean by id (it should be time-varying anyway)
   C <- data %>% group_by(!!sym(id)) %>% summarise(across(all_of(controls), ~mean(.))) %>% ungroup() %>%
+    # Making sure the ordering is consistent across
+    right_join(respondent_id) %>%
     # select the controls
     select(all_of(controls)) %>%
     # add intercept
@@ -168,7 +173,7 @@ fRLM <- function(data, id, time, exposures, outcome, controls=NULL, grouping=NUL
 
   } else {
     # Create the grouping matrix and data relevant to groupings
-    groups_matrix <- y_with_id %>% dplyr::select(!!sym(id)) %>% left_join(grouping, by = join_by(!!sym(id))) %>% select(-!!sym(id)) %>% as.matrix()
+    groups_matrix <- respondent_id %>% left_join(grouping, by = join_by(!!sym(id))) %>% select(-!!sym(id)) %>% as.matrix()
 
     # add dimensions
     grouping_T <- dim(groups_matrix)[2]
