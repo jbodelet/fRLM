@@ -172,7 +172,6 @@ fRLM <- function(data, id, time, exposures, outcome, controls=NULL, grouping=NUL
 
     # Number
     grouping_T <- dim(groups_matrix)[2]
-    browser()
     # Number of grouping variables
     grouping_S <- grouping %>% dplyr::select(-!!sym(id)) %>% as.matrix %>% unique %>% length
 
