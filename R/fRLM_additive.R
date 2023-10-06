@@ -170,9 +170,11 @@ fRLM <- function(data, id, time, exposures, outcome, controls=NULL, grouping=NUL
     # Create the grouping matrix and data relevant to groupings
     groups_matrix <- y_with_id %>% dplyr::select(!!sym(id)) %>% left_join(grouping, by = join_by(!!sym(id))) %>% select(-!!sym(id)) %>% as.matrix()
 
-    # add dimensions
+    # Number
     grouping_T <- dim(groups_matrix)[2]
-    grouping_S <- length(unique(grouping$group))
+    browser()
+    # Number of grouping variables
+    grouping_S <- grouping %>% dplyr::select(-!!sym(id)) %>% as.matrix %>% unique %>% length
 
     data_stan <- c(data_stan, list(T = grouping_T, S= grouping_S, Sigma=groups_matrix))
 
