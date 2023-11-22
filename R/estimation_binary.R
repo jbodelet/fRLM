@@ -12,6 +12,35 @@ simulateFRLM_binary <- function (n = 100, alpha = 0, delta = 3, omega = function
               delta = delta, omega = omega, alpha = alpha, errorStd = errorStd))
 }
 
+#' @export
+lpfr_binary <- function (y, Xobs, tobs, L = 4, K = 6, covariates = NULL, 
+                         alpha_par = 1, beta_par = 1, grid = seq(0, 1, l = 150), 
+                         ...){
+  stopifnot(  K >= L ) 
+  padding <- function(list_of_vec) t( sapply( list_of_vec, function(x) c( x, rep(0, Nmax - length(x) ) ) ) )
+  Nvec <- sapply(tobs, length)
+  Nmax <- max(Nvec)
+  tobs_mat <- padding(tobs)
+  xobs_mat <- padding(Xobs)
+  # bases:
+  phi <- getDensitySplines(L, grid)
+  psi <- get_splines(grid, K)$psi
+  phi_mat <- apply( tobs_mat, 1, function(tt) get_splines(tt, K )$psi, simplify = F)
+  J <- t(psi) %*% phi / length(grid)
+  # fit:
+  C <- cbind(rep(1, length(y)), covariates)
+  dat <- list( n = length(y), L = L, K = K, d = ncol(C), Nmax = Nmax, y = y, C = C, phi_mat = phi_mat,
+               J = J, Nvec = Nvec, tobs = tobs_mat, xobs = xobs_mat )
+  basis <- getBasis(L, grid)
+  fit <- rstan::stan( file = "./stan/lpfr_binary.stan", data = dat, ... )  
+  out <- c( fit = fit, rstan::extract(fit ), L = L )
+  out$psi <- psi
+  out$Xhat <- t( sapply( apply(out$xi, 2, function(x) x %*% t(psi), simplify = F), colMeans ) )
+  class(out) <- "funcRegBayes"
+  return(out)
+}
+
+
 #' LOGISTIC FUNCTIONAL LIFECOURSE MODEL 
 #' 
 #' Estimate a logistic functional regression.
