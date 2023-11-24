@@ -1,0 +1,76 @@
+# Random Effects fRLM
+
+We extend the fRLM model to account for random effects. Denoting the state index by $\sigma$ and the state individual $i$ was in at time $t$ by $\sigma_{it}$, the random-effect fRLM model is:
+
+
+$$
+y_i = \boldsymbol C_i^\prime\boldsymbol\alpha  + \sum_{j=1}^k\delta_j \int_{a}^{b} X_{ij}(t)\omega_j(t)dt + \sum_{t=1}^T\sum_{\sigma=1}^S1\{\sigma_{it} =\sigma\}\rho^{T-t}\xi_{\sigma} + \epsilon_i,
+$$
+
+$$
+\xi_\sigma \sim N(0,\sigma_{\xi}^2),
+$$
+$$
+\epsilon_i\sim N(0, \sigma_\epsilon^2)
+$$
+
+where $\boldsymbol C_i$ is a vector of covariates including an intercept, $X_{ij}(t)$ is the  exposure $j$ for individual $i$ expressed as a function of time, with associated weight $w_j$. For instance, $j$ may be "tobacco tax". $1\{A\}$ is the indicator function ant takes value $1$ if $A$ is true and $0$ otherwise, $\rho\in(0,1)$ is a discount factor and $\xi_\sigma$ is the state random effect, which, for simplicity is assumed constant over time (but varies across states). The state random-effects account for unmeasured state-effects and accumulate over time for a given respondent $i$. Furthermore, we assume that all $\xi_\sigma, \epsilon_i$ are mutually independent for all $\sigma$ and $i$.
+
+
+
+## Model Overview
+The presented model is a Random Effects functional relevant life course model (REfRLM) - which means it's a type of regression model where the dependent variable $y_i$ is influenced by both fixed and random effects. The "functional" aspect refers to the integration over a function of time, $X_{ij}(t)$.
+
+## Model Components
+
+### 1. **Dependent Variable**
+$$y_i$$
+This represents the outcome or response variable for individual $i$.
+
+### 2. **Fixed Effects**
+
+$$\boldsymbol C_i^\prime\boldsymbol\alpha$$
+
+Here, $\boldsymbol C_i$ is a vector of covariates (or predictors) for individual $i$. The 'prime' notation indicates that it's transposed (which typically means it's a row vector). $\boldsymbol\alpha$ is the vector of coefficients corresponding to these covariates. The product of these two vectors gives us the linear combination of the predictors.
+
+### 3. **Functional Component**
+
+$$\sum_{j=1}^k\delta_j \int_{a}^{b} X_{ij}(t)\omega_j(t)dt$$
+
+This component captures the effect of time-dependent exposures on the dependent variable. The exposure $X_{ij}(t)$ is a function of time $t$ for individual $i$ and exposure type $j$. For example, $j$ could represent different exposures like "tobacco tax" over time. $\omega_j(t)$ is the associated weight or coefficient for this exposure type at time $t$, and $\delta_j$ is an overall scaling factor for this exposure type. The integration from $a$ to $b$ gives the accumulated effect of this exposure over the time interval [a, b].
+
+### 4. **Random Effect Component**
+
+$$\sum_{t=1}^T\sum_{\sigma=1}^S1\{\sigma_{it} =\sigma\}\rho^{T-t}\xi_{\sigma}$$
+
+This part of the model captures the state-specific random effects, which can be thought of as deviations from the overall mean effect that are specific to different states (or groups). 
+
+- $\sigma_{it}$ represents the state that individual $i$ was in at time $t$.
+  
+- $\xi_{\sigma}$ is the random effect for state $\sigma$, and its distribution is assumed to be normal with mean 0 and variance $\sigma_{\xi}^2$.
+
+- $\rho^{T-t}$ is a discounting factor. It gives less weight to the state effects the further they are in the past. $\rho$ is between 0 and 1.
+
+### 5. **Error Term**
+
+$$\epsilon_i$$
+
+This captures the random errors or residuals for individual $i$. They're assumed to be normally distributed with mean 0 and variance $\sigma_\epsilon^2$.
+
+### 6. **Indicator Function**
+
+$$1\{A\}$$
+
+The notation $1\{A\}$ is an indicator function. It takes on the value 1 when the condition inside the curly braces is true and 0 otherwise.
+
+## Interpretation
+
+- The outcome $y_i$ for each individual is modeled as a combination of their covariates, the accumulated effect of time-dependent exposures, and state-specific random effects.
+
+- The functional component allows for capturing intricate time-dependent patterns of different exposures, like how a "tobacco tax" might impact an individual over time.
+
+- The random effect part accommodates unmeasured state-specific factors. By allowing these effects to accumulate over time with a discount factor, the model captures the diminishing importance of states the individual was in the distant past.
+
+- The model assumes that the random effects and the error terms are mutually independent, which means there's no correlation between them for any given state or individual.
+
+In summary, this is a sophisticated regression model that captures both fixed effects (like individual covariates and time-dependent exposures) and random effects (state-specific deviations), allowing for a deep understanding of the data's underlying structure and potential influences on the dependent variable.
