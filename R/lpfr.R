@@ -1,5 +1,6 @@
 # Goldsmith method
-lpfr <- function(y, tobs, xobs, L = 4, K = 5, covariates = NULL, 
+#'@export
+lpfr <- function(y, tobs, xobs, L = 4, K = 5, covariates = NULL,
                            grid = seq(0,1, l = 150 ), compiled_file = NULL, ...){
   stopifnot(  K >= L ) # condition should be met (see 2010 Goldsmith paper)
   padding <- function(list_of_vec) t( sapply( list_of_vec, function(x) c( x, rep(0, Nmax - length(x) ) ) ) )
@@ -17,9 +18,9 @@ lpfr <- function(y, tobs, xobs, L = 4, K = 5, covariates = NULL,
   dat <- list( n = length(y), L = L, K = K, d = ncol(C), Nmax = Nmax, y = y, C = C, phi_mat = phi_mat,
                J = J, Nvec = Nvec, tobs = tobs_mat, xobs = xobs_mat )
   if(is.null(compiled_file)){
-    fit <- rstan::stan( file = "./stan/lpfr.stan", data = dat, ... )  
+    fit <- rstan::stan( file = "./stan/lpfr.stan", data = dat, ... )
   }else{
-    fit <- rstan::sampling(compiled_file, data = dat, ...)            
+    fit <- rstan::sampling(compiled_file, data = dat, ...)
   }
   out <- c( fit = fit, rstan::extract(fit ), L = L )
   out$psi <- psi
