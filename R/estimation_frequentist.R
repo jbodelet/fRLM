@@ -36,7 +36,7 @@ funcReg <- function( y, X, covariates = NULL, L = 6, grid = seq(0,1, l = ncol(X)
   stopifnot( nrow(X) == length(y) )
   stopifnot( ncol(X) == length(grid) )
   C <- cbind( rep(1, length(y) ), covariates )  # scalar predictors
-  basis <- getBasis( L, grid )
+  basis <- getBasis( L, grid ) # density splines
   Int_XtimesBasis <- X %*% basis / ncol(X)
   # Algorithms:
   coeff <- constrainedOLS( y, cbind( Int_XtimesBasis, C ), constrainedId = 1:L )
@@ -52,6 +52,8 @@ funcReg <- function( y, X, covariates = NULL, L = 6, grid = seq(0,1, l = ncol(X)
 }
 
 
+
+# density splines
 getBasis <- function( L, grid ){
   knots <- seq(0, 1, length.out = L - 2 )
   return( t( bsplinePsd::dbspline( grid, knots = knots ) ) )  # basis for omega

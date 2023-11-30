@@ -8,7 +8,7 @@ lpfr <- function(y, tobs, xobs, L = 4, K = 5, covariates = NULL,
   tobs_mat <- padding(tobs)
   xobs_mat <- padding(xobs)
   # bases:
-  phi <- getDensitySplines(L, grid)
+  phi <- getBasis(L, grid) # density splines
   psi <- get_splines(grid, K)$psi
   phi_mat <- apply( tobs_mat, 1, function(tt) get_splines(tt, K )$psi, simplify = F)
   J <- t(psi) %*% phi / length(grid)

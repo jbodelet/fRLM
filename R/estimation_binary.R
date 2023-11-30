@@ -23,7 +23,7 @@ lpfr_binary <- function (y, Xobs, tobs, L = 4, K = 6, covariates = NULL,
   tobs_mat <- padding(tobs)
   xobs_mat <- padding(Xobs)
   # bases:
-  phi <- getDensitySplines(L, grid)
+  phi <- getBasis(L, grid) # density splines
   psi <- get_splines(grid, K)$psi
   phi_mat <- apply( tobs_mat, 1, function(tt) get_splines(tt, K )$psi, simplify = F)
   J <- t(psi) %*% phi / length(grid)
@@ -31,7 +31,6 @@ lpfr_binary <- function (y, Xobs, tobs, L = 4, K = 6, covariates = NULL,
   C <- cbind(rep(1, length(y)), covariates)
   dat <- list( n = length(y), L = L, K = K, d = ncol(C), Nmax = Nmax, y = y, C = C, phi_mat = phi_mat,
                J = J, Nvec = Nvec, tobs = tobs_mat, xobs = xobs_mat )
-  basis <- getBasis(L, grid)
   fit <- rstan::stan( file = "./stan/lpfr_binary.stan", data = dat, ... )  
   out <- c( fit = fit, rstan::extract(fit ), L = L )
   out$psi <- psi
