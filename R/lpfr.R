@@ -3,10 +3,15 @@
 lpfr <- function(y, tobs, xobs, L = 4, K = 5, covariates = NULL,
                            grid = seq(0,1, l = 150 ), compiled_file = NULL, ...){
   stopifnot(  K >= L ) # condition should be met (see 2010 Goldsmith paper)
-  padding <- function(list_of_vec) t( sapply( list_of_vec, function(x) c( x, rep(0, Nmax - length(x) ) ) ) )
+
   Nvec <- sapply(tobs, length)
   Nmax <- max(Nvec)
-  tobs_mat <- padding(tobs)
+
+  tobs_padded <- padding(tobs)
+  tobs_mask <- tobs_padded$mask
+  tobs_padded <- tobs_padded$padded
+
+  xobs_padded <-
   xobs_mat <- padding(xobs)
   # bases:
   phi <- getBasis(L, grid) # density splines
@@ -29,15 +34,4 @@ lpfr <- function(y, tobs, xobs, L = 4, K = 5, covariates = NULL,
   return(out)
 }
 
-
-
-get_splines <- function( grid, K, range = c(0,1), degree = 3 ){
-  nknots <- K - 2
-  knots <- orthogonalsplinebasis::expand.knots( seq( range[1], range[2], length.out = nknots ) )
-  basis  <-  orthogonalsplinebasis::SplineBasis(knots = knots, order = degree + 1 )
-  d_basis <- orthogonalsplinebasis::deriv( basis)
-  psi <- orthogonalsplinebasis::evaluate( basis, grid )
-  d2psi <- orthogonalsplinebasis::OuterProdSecondDerivative(basis)
-  return( list( psi = psi, basis = basis, d_basis = d_basis, d2psi = d2psi ) )
-}
 

@@ -11,6 +11,7 @@ fRLM_lpfr(
   exposures,
   outcome,
   family = "gaussian",
+  bounded_exposures = FALSE,
   controls = NULL,
   L = 4,
   K = 5,
@@ -25,11 +26,13 @@ fRLM_lpfr(
 
 \item{time}{A string representing the time variable in the dataframe, at what time the outcome or exposures were measured.}
 
-\item{exposures}{A character vector of strings representing the exposure variables in the dataframe.}
+\item{exposures}{A character vector of strings representing the exposure variables in the dataframe. For now limited to length 1.}
 
 \item{outcome}{A string representing the outcome variable in the dataframe.}
 
 \item{family}{A string representing the family. Either "gaussian" or "binary".}
+
+\item{bounded_exposures}{A boolean vector specifying whether the exposure should be bounded between 0 and 1. For now of length 1.}
 
 \item{controls}{A character vector of strings representing the control variables in the dataframe. Default is NULL.}
 
@@ -47,61 +50,46 @@ Wrapper function that estimates a Functional Regression Linear Model (fRLM) with
 }
 \details{
 The \code{outcome}and \code{controls} must be the same (repeated) for all time stamps for each unit. See the examples below.
-The function begins by scaling the time variable using a time scaler function created with \code{timeScaler_ff}.
-Next, the function defines a grid of 150 points between 0 and 1 and fits a Gaussian process for each exposure
-in the \code{exposures} vector using the \code{gpFit} function. The \code{gpFit} function is applied to each subject
-and the predicted values are computed on the grid for each subject.
-The resulting predicted values are then multiplied by a set of basis functions computed on the grid using the \code{getBasis} function,
-and averaged across subjects.
-The \code{data} is then aggregated by \code{id} and the means of the \code{outcome} and \code{controls} variables are computed for each subject.
-The \code{data} is then passed to the \code{rstan::stan} function to fit a Bayesian regression model.
-The fitted model and other relevant information is then returned as a list.
 }
 \examples{
 
-# Minimal example usage of the fRLM function
 library(fRLM)
-data(toy)
-output <- fRLM(data=toy,
-  id = "id",
-  time="age",
-  exposures="exposure",
-  outcome="outcome",
-  warmup = 500, iter = 1000, chains = 2) # this is passed to stan
+library(dplyr)
 
-# Example with more exposures and random effects
-
-
-# Example usage of the fRLM function
-
-library(fRLM)
-set.seed(1234)
 data(toy)
 
-toy2 <- toy
-# Add an unrelated exposure
-toy2$exposure2 <- round(rnorm(nrow(toy)),2)
-# Add a grouping
-grouping <- unique(toy2$id) \%>\% as_tibble() \%>\% rename(id=value)
-grouping <- grouping \%>\% mutate(group = 1 + (runif(n()) <0.5)*1)
+# Gaussian outcome
+fit <- fRLM_lpfr(
+  data = toy,
+  id="id",  # string, name of the subject identifier
+  exposures = "exposure", # string, the variable name of the exposures (for now, one)
+  outcome="outcome", # string, the variable name of the outcome
+  time = "age", # string, the variable name of the time at which measures were taken
+  warmup= 500,
+  iter=1000,
+  chains=4
+)
 
-# Modify the outcome to add random effects
-add_to_outcome <- grouping \%>\% mutate(to_add=ifelse(group==1, -0.5, +0.5)) \%>\% dplyr::select(id, to_add)
-toy2 <- toy2 \%>\% left_join(add_to_outcome) \%>\% mutate(outcome = outcome + to_add) \%>\% select(-to_add)
-
-
-output <- fRLM_lpfr(data=toy2,
-               id = "id",
-               time="age",
-               exposures=c("exposure", "exposure2"),
-               grouping = grouping,
-               outcome="outcome",
-               warmup = 1000, iter = 2000, chains = 2) # this is passed to stan
+plot(fit)
+w = predict(fit)
 
 
-samples <- rstan::extract(output$fit, permuted = TRUE)
-# Create confidence intervals for delta (effect size of exposures)
-apply(output$delta, 2, function(x) quantile(x, c(0.025, 0.975)))
+# Binary outcome and bounded exposure (between 0 and 1)
+toy <- toy \%>\% group_by(id) \%>\% mutate(outcome_binary = rbinom(1,1,1/(1+exp(-outcome)))) \%>\% ungroup()
 
-plot(output)
+fit_binary <- fRLM_lpfr(
+  data = toy,
+  id="id",  # string, name of the subject identifier
+  exposures = "exposure", # string, the variable name of the exposures (for now, one)
+  outcome="outcome_binary", # string, the variable name of the outcome
+  family="binary",
+  time = "age",
+  bounded_exposures = TRUE,
+  warmup= 500,
+  iter=1000,
+  chains=4
+)
+
+plot(fit_binary)
+w_binary = predict(fit_binary)
 }

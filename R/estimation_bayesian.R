@@ -77,7 +77,11 @@ predict.funcRegBayes <- function( object, newdata = seq(0,1, l = 150), returnALL
 
 #' @export
 plot.funcRegBayes <- function(object, ylim = range( pred$omega_ci ), ...){
-  grid <- seq(0,1, l = 150)
+  if(is.null(object[['grid']])) {
+    grid <- seq(0,1, l = 150)
+  } else {
+    grid <- object[['grid']]
+  }
   pred <- predict(object)
   plot( pred$omega ~ grid, lwd = 2, type = "l", col = "blue", ylim = ylim, ... )
   lines( pred$omega_ci[1, ] ~ grid, col = "lightblue" )
