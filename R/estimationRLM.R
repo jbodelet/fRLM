@@ -92,7 +92,7 @@ fitMV_RLM <- function(y, x, covariates = NULL, robust = FALSE, ...){
 
 
 #' @export
-fitMV_RLM_missingIncome <- function(y, x, z_obs, u, covariates = NULL, robust = FALSE, ...){
+fitMV_RLM_missingIncome <- function(y, x, z_obs, u, covariates = NULL, Cauchy = FALSE, ...){
   n <- nrow(y)
   p <- ncol(y)
   n_obs <- sum( !is.na(z_obs) )
@@ -105,8 +105,8 @@ fitMV_RLM_missingIncome <- function(y, x, z_obs, u, covariates = NULL, robust = 
               d = ncol(C), y = y[new_index,], z_obs = z_obs[new_index][1:n_obs], 
               x = x[new_index, ], u = u[new_index, ], C = as.matrix(C[new_index, 
               ]))
-  if(robust){
-    fileName <- "MV_RLM_missingIncome_robust.stan"
+  if(Cauchy){
+    fileName <- "MV_RLM_missingIncome_Cauchy.stan"
   }else{
     fileName <- "MV_RLM_missingIncome.stan"
   }
