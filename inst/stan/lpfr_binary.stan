@@ -20,12 +20,13 @@ parameters {
   real<lower=0> sigma;
   real<lower=0> sigma_x;
   // GP parameters:
-  matrix<lower=0, upper=1>[n,K] xi;
-  real<lower=0> sigma_xi[K];
+  vector<lower=0, upper=1>[K] xi[n];
 }
 
 model {
-  sigma_xi ~ lognormal(0,1);
+  for(i in 1:n){
+    xi[i] ~ uniform(0,1);
+  }
   sigma_x ~ lognormal(0,1);
   // fRLM priors:
   delta ~ normal(0, 10);
@@ -33,12 +34,11 @@ model {
   alpha ~ std_normal();
   // GP liklihood:
   for(i in 1:n ){
-      xobs[i,:Nvec[i] ] ~ normal(phi_mat[i][:Nvec[i] ] * xi[i]', sigma_x ); // try beta distribution
+      xobs[i,:Nvec[i] ] ~ normal(phi_mat[i][:Nvec[i] ] * xi[i], sigma_x ); // try beta distribution
   }
-
   // the likelihood
   for (i in 1:n) {
-    real lin_pred = delta * xi[i] * J * beta + C[i] * alpha;
+    real lin_pred = delta * xi[i]' * J * beta + C[i] * alpha;
     // print("Linear predictor for ", i, ": ", lin_pred);
     y[i] ~ bernoulli_logit(lin_pred);
   }
