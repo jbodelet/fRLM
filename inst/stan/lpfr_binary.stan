@@ -33,7 +33,7 @@ model {
   alpha ~ std_normal();
   // GP liklihood:
   for(i in 1:n ){
-      xobs[i,:Nvec[i] ] ~ normal(phi_mat[i][:Nvec[i] ] * xi[i]', sigma_x );# try beta distribution
+      xobs[i,:Nvec[i] ] ~ normal(phi_mat[i][:Nvec[i] ] * xi[i]', sigma_x ); // try beta distribution
   }
 
   // the likelihood
