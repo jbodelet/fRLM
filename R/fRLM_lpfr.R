@@ -45,7 +45,8 @@
 #'
 #' # Binary outcome and bounded exposure (between 0 and 1)
 #' toy <- toy %>% group_by(id) %>% mutate(outcome_binary = rbinom(1,1,1/(1+exp(-outcome)))) %>% ungroup()
-#'
+#' toy <- toy %>% mutate(exposure = (exposure - min(exposure) ) / (max(exposure) - min(exposure) ) )
+#' 
 #' fit_binary <- fRLM_lpfr(
 #'   data = toy,
 #'   id="id",  # string, name of the subject identifier
